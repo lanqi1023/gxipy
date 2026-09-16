@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*-mode:python ; tab-width:4 -*- ex:set tabstop=4 shiftwidth=4 expandtab: -*-
 # -*- coding:utf-8 -*-
-
+import locale
 from ctypes import *
 import ctypes
 import sys
@@ -196,6 +196,40 @@ class GxFeatureLevel:
     def __init__(self):
         pass
 
+class GxNodeNameSpaceType:
+    NAMESPACE_CUSTOM                                            = 0             # name resides in custom namespace
+    NAMESPACE_STANDARD                                        = 1             # name resides in one of the standard namespaces
+    NAMESPACE_UNDEFINEDNAMESPACE                = 2             # Object is not yet initialized
+
+    def __init__(self):
+        pass
+
+class GxNodeVisibilityType:
+    VISIBILITY_BEGINNER                                                  = 0            # Always visible
+    VISIBILITY_EXPERT                                                       = 1            # Visible for experts or Gurus
+    VISIBILITY_GURU                                                         = 2            # Visible for Gurus
+    VISIBILITY_INVISIBLE                                                   = 3             # Not Visible
+    VISIBILITY_UNDEFINEDVISIBILITY                              = 99          # Object is not yet initialized
+
+    def __init__(self):
+        pass
+
+class GxNodeStreamableType:
+    STREAMABLE_NO                                                        = 0            # node is not streamable
+    STREAMABLE_YES                                                        = 1            # node is streamable
+    STREAMABLE_UNDEFINEDYESNO                             = 2            # Object is not yet initialized
+
+    def __init__(self):
+        pass
+
+class GxNodeCachableType:
+    CACHABLE_NOCACHE                                                  = 0            # Do not use cache
+    CACHABLE_WRITETHROUGH                                       = 1            # Write to cache and register
+    CACHABLE_WRITEAROUND                                          = 2            # Write to register, write to cache on read
+    CACHABLE_UNDEFINEDCACHINGMODE                    = 3             # Object is not yet initialized
+
+    def __init__(self):
+        pass
 
 class GxFeatureID:
     # ---------------Device Information Section---------------------------
@@ -702,6 +736,7 @@ if sys.platform != 'linux2' and sys.platform != 'linux':
             ('pixel_format',        c_int),         # Image PixFormat
             ('frame_id',            c_ulonglong),   # The frame id of the image
             ('timestamp',           c_ulonglong),   # Time stamp of image
+			('chunk_data_handle',   c_void_p),      # Image buff address
             ('reserved',            c_int),         # Reserved
         ]
 
@@ -720,6 +755,7 @@ if sys.platform != 'linux2' and sys.platform != 'linux':
             ('frame_id', c_ulonglong),              # The frame id of the image
             ('timestamp', c_ulonglong),             # Time stamp of image
             ('user_param', c_void_p),               # User param
+            ('chunk_data_handle',   c_void_p),      # Image buff address
             ('reserved',  c_int),                   # Reserved
 
             ('buf_id', c_ulonglong),                # Image buff ID (for dq_buf)
@@ -742,6 +778,7 @@ if sys.platform != 'linux2' and sys.platform != 'linux':
             ('offset_x', c_uint),                   # X-direction offset of the image
             ('offset_y', c_uint),                   # Y-direction offset of the image
             ('user_param', c_void_p),               # User param
+            ('chunk_data_handle', c_void_p),        # Image buff address
             ('reserved', c_uint),                   # Reserved
         ]
 
@@ -927,6 +964,97 @@ class GxActionCommandResult(Structure):
     def __str__(self):
         return "GxActionCommandResult\n%s" % "\n".join("%s:\t%s" % (n, getattr(self, n[0])) for n in self._fields_)
 
+class GxEnumDetailValue(Structure):
+    _fields_ = [
+        ('cur_value'    ,   c_int64),                           # Enumerate subkey values
+        ('cur_symbolic' ,   c_char * 128),              # Enumeration sub item description
+        ('cur_displayname' ,   c_char * 128),        # Enumeration sub item displayname
+        ('reserved'     ,   c_int32 * 4),                     # Reserved
+    ]
+    def __str__(self):
+        return "GxEnumDetailValue\n%s" % "\n".join("%s:\t%s" % (n, getattr(self, n[0])) for n in self._fields_)
+
+class GxEnumDetailFeatrue( Structure):
+    _fields_ = [
+        ('cur_value'        ,   GxEnumDetailValue),                     # Current enumeration value
+        ('supported_number' ,   c_int64),                                # Number of enumerated subitems
+        ('supported_value'  ,   GxEnumDetailValue * 128),   # Info of enumerated subitems
+        ('reserved'         ,   c_int32 * 16),                                   # Reserved
+    ]
+    def __str__(self):
+        return "GxEnumDetailFeatrue\n%s" % "\n".join("%s:\t%s" % (n, getattr(self, n[0])) for n in self._fields_)
+
+
+class GxCFAMethod:
+    GX_CFA_METHOD_QUICK = 0  # Quickly
+    GX_CFA_METHOD_BALANCE = 1  # Balance
+    GX_CFA_METHOD_OPTIMAL = 2  # Optimal
+
+    def __init__(self):
+        pass
+
+
+class GxImageFormatType:
+    GX_IMAGE_FORMAT_JPEG = 0  # JPEG
+    GX_IMAGE_FORMAT_PNG = 1  # PNG
+    GX_IMAGE_FORMAT_TIFF = 2  # TIFF
+    GX_IMAGE_FORMAT_RAW = 3  # RAW
+    GX_IMAGE_FORMAT_BMP = 4  # BMP
+
+    def __init__(self):
+        pass
+
+
+class GxVideoFormatType:
+    GX_VIDEO_FORMAT_H264_AVI = 0  # AVI
+    GX_VIDEO_FORMAT_H264_MP4 = 1  # MP4
+    GX_VIDEO_FORMAT_ORIGINAL_AVI = 2  # RAW
+
+    def __init__(self):
+        pass
+
+
+# save image param
+class GxSaveImageInfo(Structure):
+    _fields_ = [
+        ('image_buf', c_void_p),
+        ('width', c_uint),
+        ('height', c_uint),
+        ('src_format', c_int),
+        ('cfa_method', c_int),  # GxCFAMethod
+        ('image_format', c_int),  # GxImageFormatType
+        ('image_path', c_char_p),
+        ('image_quality', c_uint),
+        ('reserved', c_int)
+    ]
+
+    def __str__(self):
+        return "GxSaveImageInfo\n%s" % "\n".join("%s:\t%s" % (n, getattr(self, n[0])) for n in self._fields_)
+
+
+# save video param
+class GxRecordParam(Structure):
+    _fields_ = [
+        ('pixel_format', c_int),
+        ('video_format', c_int),  # GxVideoFormatType
+        ('width', c_uint),
+        ('height', c_uint),
+        ('frame_rate', c_uint),
+        ('bit_rate', c_uint),
+        ('video_path', c_char_p),
+        ('reserved', c_int),
+    ]
+
+    def __str__(self):
+        return "GxRecordParam\n%s" % "\n".join("%s:\t%s" % (n, getattr(self, n[0])) for n in self._fields_)
+
+# feature name
+class GXFeatureName(Structure):
+    _fields_ = [
+        ('feature_name', c_char * 128),         # FeatureName
+    ]
+    def __str__(self):
+        return "GXFeatureName\n%s" % "\n".join("%s:\t%s" % (n, getattr(self, n[0])) for n in self._fields_)
 
 if hasattr(dll, 'GXSetLogType'):
     def gx_set_log_type(log_type):
@@ -2654,6 +2782,67 @@ if hasattr(dll, 'GXUnregisterDeviceOfflineCallback'):
         status = dll.GXUnregisterDeviceOfflineCallback(handle_c, call_back_handle_c)
         return status
 
+RECONNECT_CALL = CFUNCTYPE(None, c_void_p)
+if hasattr(dll, 'GXRegisterDeviceReconnectCallback'):
+    def gx_register_device_reconnect_callback(handle, call_back):
+        """
+        :brief      At present, the mercury GIGE camera provides the device offline notification event mechanism,
+                    the user can call this interface to register the event handle callback function
+        :param      handle:             The handle of the device
+        :param      call_back:          The user event handle callback function(@ RECONNECT_CALL)
+        :return:    status:             State return value, See detail in GxStatusList
+                    call_back_handle:   The handle of offline callback function
+                                        the handle is used for unregistering the callback function
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        status = dll.GXRegisterDeviceReconnectCallback(handle_c, None, call_back)
+        return status
+
+if hasattr(dll, 'GXUnregisterDeviceReconnectCallback'):
+    def gx_unregister_device_reconnect_callback(handle):
+        """
+        :brief      Unregister event handle callback function
+        :param      handle:             The handle of the device
+        :param      call_back_handle:   The handle of device offline callback function
+        :return:    status:             State return value, See detail in GxStatusList
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        status = dll.GXUnregisterDeviceReconnectCallback(handle_c)
+        return status
+
+DISCONNECT_CALL = CFUNCTYPE(None, c_void_p)
+if hasattr(dll, 'GXRegisterDeviceDisconnectCallback'):
+    def gx_register_device_disconnect_callback(handle, call_back):
+        """
+        :brief      At present, the mercury GIGE camera provides the device offline notification event mechanism,
+                    the user can call this interface to register the event handle callback function
+        :param      handle:             The handle of the device
+        :param      call_back:          The user event handle callback function(@ RECONNECT_CALL)
+        :return:    status:             State return value, See detail in GxStatusList
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        status = dll.GXRegisterDeviceDisconnectCallback(handle_c, None, call_back)
+        return status
+
+if hasattr(dll, 'GXUnregisterDeviceDisconnectCallback'):
+    def gx_unregister_device_disconnect_callback(handle):
+        """
+        :brief      Unregister event handle callback function
+        :param      handle:             The handle of the device
+        :return:    status:             State return value, See detail in GxStatusList
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        status = dll.GXUnregisterDeviceDisconnectCallback(handle_c)
+        return status
+
 
 
 if hasattr(dll, 'GXFlushEvent'):
@@ -3028,6 +3217,341 @@ if hasattr(dll, 'GXGigEIssueScheduledActionCommand'):
                 'device_ip': string_decoding(expect_ack_st[i].device_ip),
             })
         return status, actual_ack_list
+
+if hasattr(dll, 'GXGetNodeNameSpace'):
+    def gx_get_node_name_space(handle, feature_name):
+        """
+        :brief      Obtain whether the node is a protocol standard node.
+        :param      handle:         The handle that the device each layer
+                                                Type: Long, Greater than 0
+        :param      feature_name:   The feature_name that node feature name.
+                                                Type: char*
+        :return:    status:         State return value
+                                             Protocol standard node to which the node belongs
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        feature_name_c = create_string_buffer(string_encoding(feature_name))
+
+        node_name_space_c = c_int()
+        node_name_space_c.value = GxNodeNameSpaceType.NAMESPACE_UNDEFINEDNAMESPACE
+
+        status = dll.GXGetNodeNameSpace(handle_c, feature_name_c, byref(node_name_space_c))
+        return status,node_name_space_c.value
+
+if hasattr(dll, 'GXGetNodeVisibility'):
+    def gx_get_node_visibility(handle, feature_name):
+        """
+        :brief      Recommended visibility of a node.
+        :param      handle:         The handle that the device each layer
+                                                Type: Long, Greater than 0
+        :param      feature_name:   The feature_name that node feature name.
+                                                Type: char*
+        :return:    status:         State return value
+                                                feature node visibility mode
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        feature_name_c = create_string_buffer(string_encoding(feature_name))
+
+        node_visibility_c = c_int()
+        node_visibility_c.value = GxNodeVisibilityType.VISIBILITY_UNDEFINEDVISIBILITY
+
+        status = dll.GXGetNodeVisibility(handle_c, feature_name_c, byref(node_visibility_c))
+        return status,node_visibility_c.value
+
+if hasattr(dll, 'GXGetNodeStreamable'):
+    def gx_get_node_streamable(handle, feature_name):
+        """
+        :brief      Can the node values be streamable.
+        :param      handle:         The handle that the device each layer
+                                                Type: Long, Greater than 0
+        :param      feature_name:   The feature_name that node feature name.
+                                                Type: char*
+        :return:    status:         State return value
+                                              feature node streamable mode
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        feature_name_c = create_string_buffer(string_encoding(feature_name))
+
+        node_streamable_c = c_int()
+        node_streamable_c.value = GxNodeStreamableType.STREAMABLE_UNDEFINEDYESNO
+
+        status = dll.GXGetNodeStreamable(handle_c, feature_name_c, byref(node_streamable_c))
+        return status,node_streamable_c.value
+
+if hasattr(dll, 'GXGetNodeCachable'):
+    def gx_get_node_cachable(handle, feature_name):
+        """
+        :brief      Caching mode of a node.
+        :param      handle:         The handle that the device each layer
+                                                Type: Long, Greater than 0
+        :param      feature_name:   The feature_name that node feature name.
+                                                Type: char*
+        :return:    status:         State return value
+                                              feature node cachable mode
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        feature_name_c = create_string_buffer(string_encoding(feature_name))
+
+        node_cachable_c = c_int()
+        node_cachable_c.value = GxNodeCachableType.CACHABLE_UNDEFINEDCACHINGMODE
+
+        status = dll.GXGetNodeCachable(handle_c, feature_name_c, byref(node_cachable_c))
+        return status,node_cachable_c.value
+
+if hasattr(dll, 'GXGetNodePolling'):
+    def gx_get_node_polling(handle, feature_name):
+        """
+        :brief      Get polling value of a node.
+        :param      handle:         The handle that the device each layer
+                                                Type: Long, Greater than 0
+        :param      feature_name:   The feature_name that node feature name.
+                                                Type: char*
+        :return:    status:         State return value
+                                              polling value of node.
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        feature_name_c = create_string_buffer(string_encoding(feature_name))
+
+        node_polling_c = c_int()
+        node_polling_c.value = -1
+
+        status = dll.GXGetNodePolling(handle_c, feature_name_c, byref(node_polling_c))
+        return status,node_polling_c.value
+
+if hasattr(dll, 'GXGetEnumDetailValue'):
+    def gx_get_enum_detail_feature(handle, feature_name):
+        """
+        :brief      To get the current enumeration value
+        :param      handle:     The handle of the device each layer.
+                                            Type: Long, Greater than 0
+        :param      feature_name:The feature node name.
+                                            Type: char*
+        :return:    status:     State return value
+                                          enum info
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        feature_name_c = create_string_buffer(string_encoding(feature_name))
+
+        enum_feature_c = GxEnumDetailFeatrue()
+
+        status = dll.GXGetEnumDetailValue(handle_c,feature_name_c, byref(enum_feature_c))
+        return status,enum_feature_c
+
+if hasattr(dll, 'GXSaveImage'):
+    def gx_save_image(save_image_info):
+        """
+        :brief
+        :param      save_image_info:     GxSaveImageInfo
+        :return:    status:     State return value
+                                          enum info
+        """
+        dll.GXSaveImage.argtypes = [ctypes.POINTER(GxSaveImageInfo)]
+        dll.GXSaveImage.restype = c_int
+        status = dll.GXSaveImage(save_image_info)
+        return status
+
+if hasattr(dll, 'GXCreateRecorder'):
+    def gx_create_recorder(record_param, recorder):
+        """
+        :brief      To get the current enumeration value
+        :param      record_param:     GxRecordParam
+        :param      recorder:        video handle
+        :return:    status:     State return value
+                                          enum info
+        """
+
+        handle_c = c_void_p()
+        dll.GXCreateRecorder.argtypes = [ctypes.POINTER(GxRecordParam),
+                                         ctypes.POINTER(c_void_p)]
+        dll.GXCreateRecorder.restype = c_int
+        status = dll.GXCreateRecorder(record_param, recorder)
+
+        return status
+
+if hasattr(dll, 'GXAddFrame'):
+    def gx_add_frame(recorder, image_buffer):
+        """
+        :param      recorder:     The handle of the video
+        :param      image_buffer:The image buffer
+        :return:    status:     State return value
+                                          enum info
+        """
+
+        dll.GXAddFrame.argtypes  = [c_void_p, c_void_p]
+        dll.GXAddFrame.restype = c_int
+        status = dll.GXAddFrame(recorder, image_buffer)
+
+        return status
+
+if hasattr(dll, 'GXDestroyRecorder'):
+    def gx_destroy_recorder(recorder):
+        """
+        :param      recorder:     The handle of the video.
+        :return:    status:     State return value
+                                          enum info
+        """
+
+        dll.GXDestroyRecorder.argtypes  = [c_void_p]
+        dll.GXDestroyRecorder.restype = c_int
+        status = dll.GXDestroyRecorder(recorder)
+
+        return status
+
+if hasattr(dll, 'GXCreateWnd'):
+    def gx_create_window(device, windows_id, parent_handle):
+        """
+        :param      device:         The handle of the device.
+        :param      windows_id:     Different Types of Windows Currently Only Property Window
+        :param      parent_handle:  If the current window handle is null, show a message box; else, embed the display.
+        :return:    status:     State return value
+                                          enum info
+                    handle:        Successfully created window handle
+        """
+        device_c = c_void_p()
+        device_c.value = device
+
+        parent_c = c_void_p()
+        parent_c.value = parent_handle
+
+        wnd_handle = c_void_p()
+        status = dll.GXCreateWnd(device_c, windows_id, parent_c, byref(wnd_handle))
+
+        return status, wnd_handle.value
+
+    def gx_destroy_window(wnd_handle):
+        """
+        :param      wnd_handle:  The handle of the window.
+        :return:    status:     State return value
+                                          enum info
+                    handle:        Successfully created window handle
+        """
+        wnd_c = c_void_p()
+        wnd_c.value = wnd_handle
+
+        status = dll.GXDestroyWnd(wnd_c)
+
+        return status
+
+    def gx_set_show_position(wnd_handle, pos_x, pos_y, width, height):
+        """
+        :param      wnd_handle:      The handle of the window.
+        :return:    status:     State return value
+                                          enum info
+                    handle:        Successfully created window handle
+        """
+        wnd_c = c_void_p()
+        wnd_c.value = wnd_handle
+
+        pos_x_c = c_int()
+        pos_x_c.value = pos_x
+
+        pos_y_c = c_int()
+        pos_y_c.value = pos_y
+
+        width_c = c_int()
+        width_c.value = width
+
+        height_c = c_int()
+        height_c.value = height
+
+        status = dll.GXSetShowPosition(wnd_c, pos_x_c, pos_y_c, width_c, height_c)
+
+        return status
+
+    def gx_set_show_mode(wnd_handle, mode):
+        """
+        :param      wnd_handle:      The handle of the window.
+        :param      mode:         show mode
+        :return:    status:     State return value
+                                          enum info
+                    handle:        Successfully created window handle
+        """
+        wnd_c = c_void_p()
+        wnd_c.value = wnd_handle
+
+        mode_c = c_int()
+        mode_c.value = mode
+
+        status = dll.GXSetShowMode(wnd_c, mode_c)
+        return status
+
+    def gx_show_window(wnd_handle, visible):
+        """
+        :param      wnd_handle:      The handle of the window.
+        :param      visible:         true: show window, false: hide window
+        :return:    status:     State return value
+                                          enum info
+                    handle:        Successfully created window handle
+        """
+        wnd_c = c_void_p()
+        wnd_c.value = wnd_handle
+
+        status = dll.GXShowWnd(wnd_c, visible)
+
+        return status
+
+    def gx_set_window_title(wnd_handle, title):
+        """
+        :param      wnd_handle:      The handle of the window.
+        :param      title:           window title
+        :return:    status:     State return value
+                                          enum info
+                    handle:        Successfully created window handle
+        """
+        wnd_c = c_void_p()
+        wnd_c.value = wnd_handle
+
+        if sys.platform == 'linux2' or sys.platform == 'linux':
+            title_encoded = title.encode('utf-8')
+        else:
+            title_encoded = title.encode(locale.getpreferredencoding())
+        title_c = create_string_buffer(title_encoded)
+
+        status = dll.GXSetWndTitle(wnd_c, byref(title_c))
+        return status
+
+if hasattr(dll, 'GXGetChildEntry'):
+    def gx_get_child_entry(handle, feature_name):
+        """
+        :brief      Retrieve the child nodes of feature_name
+        :param      handle:     The handle of the device each layer.
+                                Type: Long, Greater than 0
+        :param      feature_name:The feature node name.
+                                Type: char*
+        :param      feature_list:The feature node list type:GXFeatureName
+                                Type: char*
+        :param      count:The feature node list count
+                                Type: char*
+        :return:    status:     State return int value
+                        feature list:  GXFeatureName list
+                        list size: list count
+        """
+        handle_c = c_void_p()
+        handle_c.value = handle
+
+        feature_name_c = create_string_buffer(string_encoding(feature_name))
+
+        list_count = c_uint()
+
+        status = dll.GXGetChildEntry(handle_c, feature_name_c, None, byref(list_count))
+        if 0 != status :
+            return status
+
+        feature_list = (GXFeatureName * list_count.value)()
+        status = dll.GXGetChildEntry(handle_c,feature_name_c, byref(feature_list), byref( list_count))
+        return status, feature_list, list_count.value
 
 '''
 if hasattr(dll, 'GXStreamOn'):

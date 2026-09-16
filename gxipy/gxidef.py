@@ -1228,6 +1228,40 @@ class DxValidBit:
     def __init__(self):
         pass
 
+class GxNodeNameSpaceList:
+    NAMESPACE_CUSTOM                                            = 0             # name resides in custom namespace
+    NAMESPACE_STANDARD                                        = 1             # name resides in one of the standard namespaces
+    NAMESPACE_UNDEFINEDNAMESPACE                = 2             # Object is not yet initialized
+
+    def __init__(self):
+        pass
+
+class GxNodeVisibilityList:
+    VISIBILITY_BEGINNER                                                  = 0            # Always visible
+    VISIBILITY_EXPERT                                                       = 1            # Visible for experts or Gurus
+    VISIBILITY_GURU                                                         = 2            # Visible for Gurus
+    VISIBILITY_INVISIBLE                                                   = 3             # Not Visible
+    VISIBILITY_UNDEFINEDVISIBILITY                              = 99          # Object is not yet initialized
+
+    def __init__(self):
+        pass
+
+class GxNodeStreamableList:
+    STREAMABLE_NO                                                        = 0            # node is not streamable
+    STREAMABLE_YES                                                        = 1            # node is streamable
+    STREAMABLE_UNDEFINEDYESNO                             = 2            # Object is not yet initialized
+
+    def __init__(self):
+        pass
+
+class GxNodeCachableList:
+    CACHABLE_NOCACHE                                                  = 0            # Do not use cache
+    CACHABLE_WRITETHROUGH                                       = 1            # Write to cache and register
+    CACHABLE_WRITEAROUND                                          = 2            # Write to register, write to cache on read
+    CACHABLE_UNDEFINEDCACHINGMODE                    = 3             # Object is not yet initialized
+
+    def __init__(self):
+        pass
 
 # image mirror method
 class DxImageMirrorMode:
@@ -1253,5 +1287,16 @@ class GxImageInfo:
     image_buf = None
     image_pixel_format = GxPixelFormatEntry.UNDEFINED
 
+    def __init__(self):
+        pass
+
+class GxWindowsID:
+    WINDOW_PROPERTY = 0x0
+    def __init__(self):
+        pass
+
+class GxWindowsShowMode:
+    NON_BLOCK_SHOW_MODE = 0
+    BLOCK_SHOW_MODE = 1
     def __init__(self):
         pass

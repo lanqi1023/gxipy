@@ -7,8 +7,10 @@ import numpy
 from gxipy.gxwrapper import *
 from gxipy.dxwrapper import *
 from gxipy.gxidef import *
+from gxipy.FeatureControl import *
 from gxipy.gxiapi import *
 from gxipy.StatusProcessor import *
+from gxipy.Buffer import *
 import types
 
 COLOR_TRANSFORM_MATRIX_SIZE = 9  # 3*3
@@ -17,49 +19,6 @@ if sys.version_info.major > 2:
     INT_TYPE = int
 else:
     INT_TYPE = (int, long)
-
-class Buffer:
-    def __init__(self, data_array):
-        try:
-            addressof(data_array)
-        except TypeError:
-            error_msg = "Buffer.__init__: param is error type."
-            raise ParameterTypeError(error_msg)
-
-        self.data_array = data_array
-
-    @staticmethod
-    def from_file(file_name):
-        file_object = open(file_name, "rb")
-        file_string = file_object.read()
-        # print("data_array_len0:", len(file_string))
-        data_array = create_string_buffer(file_string,len(file_string))
-        # print("data_array_len:",len(data_array))
-        # print("data_array:",data_array)
-        file_object.close()
-        return Buffer(data_array)
-
-    @staticmethod
-    def from_string(string_data):
-        data_array = create_string_buffer(string_data, len(string_data))
-        return Buffer(data_array)
-
-    def get_data(self):
-        buff_p = c_void_p()
-        buff_p.value = addressof(self.data_array)
-        string_data = string_at(buff_p, len(self.data_array))
-        return string_data
-
-    def get_ctype_array(self):
-        return self.data_array
-
-    def get_numpy_array(self):
-        numpy_array = numpy.array(self.data_array)
-        return numpy_array
-
-    def get_length(self):
-        return len(self.data_array)
-
 
 class RGBImage:
     def __init__(self, frame_data):
@@ -599,6 +558,10 @@ class RawImage:
                 print('''RawImage.convert: mode="RAW8" don't support flip=True''')
                 return None
 
+            if (self.frame_data.pixel_format == GxPixelFormatEntry.YUV422_8 or
+            self.frame_data.pixel_format == GxPixelFormatEntry.YUV422_8_UYVY):
+                raise NoImplemented("Does not support YUV to RAW8")
+
             dest_pixel_format = Utility.get_convert_dest_8bit_pixel_format(self.frame_data.pixel_format)
             if dest_pixel_format == GxPixelFormatEntry.UNDEFINED:
                 raise UnexpectedError("__convert_to_raw8 get dest pixel format failure")
@@ -915,6 +878,7 @@ class RawImage:
             print("RawImage.get_numpy_array: This is a incomplete image")
             return None
 
+
         image_size = self.frame_data.width * self.frame_data.height
 
         if self.frame_data.pixel_format & PIXEL_BIT_MASK == GX_PIXEL_8BIT:
@@ -929,11 +893,8 @@ class RawImage:
         elif self.frame_data.pixel_format == GxPixelFormatEntry.BGR8:
             image_np = numpy.frombuffer(self.__image_array, dtype=numpy.ubyte, count=image_size * 3). \
             reshape(self.frame_data.height, self.frame_data.width, 3)
-        elif self.frame_data.pixel_format in (GxPixelFormatEntry.MONO10_PACKED, GxPixelFormatEntry.MONO12_PACKED):
-            image_np = numpy.frombuffer(self.__image_array, dtype=numpy.ubyte, count=image_size). \
-            reshape(self.frame_data.height, self.frame_data.width)
         else:
-            image_np = None
+            raise NoImplemented("Unsupported pixel format %s, Call convert first." % hex(self.frame_data.pixel_format).__str__())
 
         return image_np
 
@@ -974,9 +935,13 @@ class RawImage:
             raise ParameterTypeError("RawImage.save_raw: "
                                      "Expected file_path type is str, not %s" % type(file_path))
 
+        # wirte real size
+        image_array = memoryview(self.__image_array)
+        chunk_to_write = image_array[:self.frame_data.image_size]
+
         try:
             fp = open(file_path, "wb")
-            fp.write(self.__image_array)
+            fp.write(chunk_to_write)
             fp.close()
         except Exception as error:
             raise UnexpectedError("RawImage.save_raw:%s" % error)
@@ -1037,6 +1002,16 @@ class RawImage:
         """
         return self.user_param
 
+    def get_chunk_data_feature_control(self):
+        """
+        :brief      Get chunk data feature control object
+        :return:    chunk data feature control object
+        """
+        if self.frame_data.chunk_data_handle == None:
+            raise NoImplemented("chunk data is not implemented!")
+        else:
+            feature_control = FeatureControl( self.frame_data.chunk_data_handle)
+            return  feature_control
 class Utility:
     def __init__(self):
         pass

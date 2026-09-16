@@ -131,6 +131,7 @@ class DataStream:
             frame_data.timestamp = frame_buffer.timestamp
             frame_data.user_param = frame_buffer.user_param
             frame_data.buf_id = frame_buffer.buf_id
+            frame_data.chunk_data_handle = frame_buffer.chunk_data_handle
 
             if sys.platform == 'linux2' or sys.platform == 'linux':
                 frame_data.offset_x = frame_buffer.offset_x
@@ -274,6 +275,7 @@ class DataStream:
         frame_data.frame_id = capture_data.contents.frame_id
         frame_data.timestamp = capture_data.contents.timestamp
         frame_data.status = capture_data.contents.status
+        frame_data.chunk_data_handle = capture_data.contents.chunk_data_handle
         # frame_data.buf_id = capture_data.contents.buf_id
 
         if sys.platform == 'linux2' or sys.platform == 'linux':
