@@ -11,8 +11,11 @@ from typing import Callable, Optional
 import gxipy
 
 class CCD:
+    DEFAULT_PROCESS_RG8  = lambda bayer: cv2.cvtColor(bayer, cv2.COLOR_BayerRGGB2BGR)
+    DEFAULT_PROCESS_RG12 = lambda bayer: cv2.cvtColor((bayer >> 4).astype(np.uint8), cv2.COLOR_BayerRGGB2BGR)
+
     def __init__(self):
-        self.process:   Callable[[NDArray], NDArray]   = lambda bayer: cv2.cvtColor(bayer, cv2.COLOR_BayerRGGB2BGR)
+        self.process:   Callable[[NDArray], NDArray]   = CCD.DEFAULT_PROCESS_RG8
         self.__manager: Optional[gxipy.DeviceManager]  = None
         self.__camera:  Optional[gxipy.Device]         = None
         self.__feature: Optional[gxipy.FeatureControl] = None
@@ -83,7 +86,7 @@ class CCD:
     @property
     def exposure(self) -> Optional[float]:
         '''
-        from 37.0 us to 1000000.0 us
+        from 37.0 us to 1000000.0 us, continuously
         '''
         try:
             return self.__feature.get_float_feature("ExposureTime").get()
@@ -163,9 +166,9 @@ if __name__ == '__main__':
 
     ccd = CCD()
     if ccd.open_camera():
-        # ccd.format   = 'BayerRG12'
         # ccd.size     = (1600, 1600)
         # ccd.exposure = 1000
-        # ccd.process  = lambda bayer: cv2.cvtColor((bayer >> 4).astype(np.uint8), cv2.COLOR_BayerRGGB2BGR)
+        # ccd.format   = 'BayerRG12'
+        # ccd.process  = CCD.DEFAULT_PROCESS_RG12
         ccd.capture_loop()
         ccd.close_camera()
