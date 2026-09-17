@@ -158,6 +158,35 @@ class CCD:
                 cv2.destroyWindow(window)
             self.__camera.stream_off()
 
+    def list_feature(self) -> None:
+        for name, feature in vars(self.__camera).items():
+            if isinstance(feature, gxipy.Feature):
+                if feature.is_implemented():
+                    if isinstance(feature, gxipy.IntFeature):
+                        print(name, '= '
+                            f"{feature.get() if feature.is_readable() else '?'} "
+                            f"{feature.get_range().get('unit, ', '')}"
+                            f"in [{feature.get_range().get('min')}, "
+                            f"{feature.get_range().get('max')}]")
+                    if isinstance(feature, gxipy.FloatFeature):
+                        print(name, '= '
+                            f"{feature.get() if feature.is_readable() else '?'} "
+                            f"{feature.get_range().get('unit, ', '')}"
+                            f"in [{feature.get_range().get('min')}, "
+                            f"{feature.get_range().get('max')}]")
+                    elif isinstance(feature, gxipy.EnumFeature):
+                        print(name, '= '
+                            f"{feature.get()[1] if feature.is_readable() else '?'} "
+                            f"in {list(feature.get_range())}")
+                    elif isinstance(feature, gxipy.BoolFeature):
+                        print(name, '= '
+                            f"{feature.get() if feature.is_readable() else '?'}")
+                    elif isinstance(feature, gxipy.StringFeature):
+                        print(name, '= '
+                            f"'{feature.get() if feature.is_readable() else '?'}'")
+                    elif isinstance(feature, gxipy.BufferFeature):
+                        print('(buffer)', name)
+
 if __name__ == '__main__':
     logging.basicConfig(
         level  = logging.INFO,
@@ -166,9 +195,12 @@ if __name__ == '__main__':
 
     ccd = CCD()
     if ccd.open_camera():
+        # ccd.list_feature()
+
         # ccd.size     = (1600, 1600)
         # ccd.exposure = 1000
         # ccd.format   = 'BayerRG12'
         # ccd.process  = CCD.DEFAULT_PROCESS_RG12
+
         ccd.capture_loop()
         ccd.close_camera()
