@@ -1,3 +1,6 @@
+import sys
+sys.path.append(r'D:\software\GalaxySDK\Development\Samples\Python')
+
 import cv2
 import logging
 import time
@@ -24,7 +27,7 @@ class CCD:
             self.__feature.get_enum_feature('UserSetSelector').set('Default')
             self.__feature.get_command_feature('UserSetLoad').send_command()
             self.log.info(f"open {device_list[0]['model_name']} @ {device_list[0]['ip']}, "
-                          f"size: {self.size}, format: {self.format}")
+                          f"size: {self.size}, format: {self.format}, exposure: {self.exposure}")
             return True
         else:
             self.log.error('no camera found')
@@ -42,50 +45,58 @@ class CCD:
 
     @property
     def size(self) -> Optional[tuple[int, int]]:
-        if self.__feature is None:
-            self.log.warning('open camera to get size')
+        '''
+        height in [16, 4096], width in [16, 3072], must be a multiple of 16
+        '''
+        try:
+            return self.__feature.get_int_feature("Width").get(), self.__feature.get_int_feature("Height").get()
+        except Exception as e:
+            self.log.error(f'get size failed: {e}')
             return None
-        else:
-            try:
-                return self.__feature.get_int_feature("Width").get(), self.__feature.get_int_feature("Height").get()
-            except Exception as e:
-                self.log.error(f'get size failed: {e}')
-                return None
 
     @size.setter
     def size(self, size: tuple[int, int]) -> None:
-        if self.__feature is None:
-            self.log.warning('open camera to set size')
-        else:
-            try:
-                self.__feature.get_int_feature("Width").set(size[0])
-                self.__feature.get_int_feature("Height").set(size[1])
-            except Exception as e:
-                self.log.error(f'set size falied: {e}')
+        try:
+            self.__feature.get_int_feature("Width").set(size[0])
+            self.__feature.get_int_feature("Height").set(size[1])
+        except Exception as e:
+            self.log.error(f'set size falied: {e}')
 
     @property
     def format(self) -> Optional[str]:
-        if self.__feature is None:
-            self.log.warning('open camera to get format')
+        '''
+        'BayerRG8' or 'BayerRG12'
+        '''
+        try:
+            return self.__feature.get_enum_feature("PixelFormat").get()[1]
+        except Exception as e:
+            self.log.error(f'get format failed: {e}')
             return None
-        else:
-            try:
-                return self.__feature.get_enum_feature("PixelFormat").get()[1]
-            except Exception as e:
-                self.log.error(f'get format failed: {e}')
-                return None
 
     @format.setter
     def format(self, format: str) -> None:
-        if self.__feature is None:
-            self.log.warning('open camera to set format')
-        elif format not in ['BayerRG8', 'BayerRG12']:
-            self.log.warning(f'format {format} not supported')
-        else:
-            try:
-                self.__feature.get_enum_feature("PixelFormat").set(format)
-            except Exception as e:
-                self.log.error(f'set format falied: {e}')
+        try:
+            self.__feature.get_enum_feature("PixelFormat").set(format)
+        except Exception as e:
+            self.log.error(f'set format falied: {e}')
+
+    @property
+    def exposure(self) -> Optional[float]:
+        '''
+        from 37.0 us to 1000000.0 us
+        '''
+        try:
+            return self.__feature.get_float_feature("ExposureTime").get()
+        except Exception as e:
+            self.log.error(f'get exposure time failed: {e}')
+            return None
+
+    @exposure.setter
+    def exposure(self, exposure: float) -> None:
+        try:
+            self.__feature.get_float_feature("ExposureTime").set(exposure)
+        except Exception as e:
+            self.log.error(f'set exposure time falied: {e}')
 
     def __grab(self) -> Optional[NDArray[np.uint8 | np.uint16]]:
         buf = None
@@ -152,8 +163,9 @@ if __name__ == '__main__':
 
     ccd = CCD()
     if ccd.open_camera():
-        # ccd.format  = 'BayerRG12'
-        # ccd.size    = (160, 160)
-        # ccd.process = lambda bayer: cv2.cvtColor((bayer >> 4).astype(np.uint8), cv2.COLOR_BayerRGGB2BGR)
+        # ccd.format   = 'BayerRG12'
+        # ccd.size     = (1600, 1600)
+        # ccd.exposure = 1000
+        # ccd.process  = lambda bayer: cv2.cvtColor((bayer >> 4).astype(np.uint8), cv2.COLOR_BayerRGGB2BGR)
         ccd.capture_loop()
         ccd.close_camera()
